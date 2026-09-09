@@ -3,20 +3,47 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>X O X Game</title>
+    <title>NR XOX GAME</title>
     <style>
-        * { box-sizing: border-box; margin: 0; padding: 0; font-family: Arial, sans-serif; }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
         body { 
             display: flex; 
             flex-direction: column; 
             align-items: center; 
             justify-content: center; 
             min-height: 100vh; 
-            background-color: #1e1e2e; 
+            background: linear-gradient(135deg, #1e1e2e, #11111b); 
             color: #fff; 
+            padding: 20px;
         }
-        h1 { margin-bottom: 20px; font-size: 2.2rem; color: #f5c2e7; }
-        .status { font-size: 1.3rem; margin-bottom: 25px; color: #a6adc8; font-weight: bold; }
+        .title { 
+            font-size: 2.2rem; 
+            font-weight: 800;
+            margin-bottom: 15px; 
+            background: linear-gradient(45deg, #f5c2e7, #cba6f7, #89b4fa); 
+            -webkit-background-clip: text; 
+            -webkit-text-fill-color: transparent; 
+            letter-spacing: 2px;
+            text-align: center;
+        }
+        .scoreboard {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            background: #313244;
+            padding: 12px 15px;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+            text-align: center;
+        }
+        .score-box {
+            padding: 0 6px;
+        }
+        .score-box .label { font-size: 0.7rem; color: #a6adc8; margin-bottom: 4px; }
+        .score-box .val { font-size: 1.1rem; font-weight: bold; color: #f5e0dc; }
+        
+        .status { font-size: 1.2rem; margin-bottom: 20px; color: #f9e2af; font-weight: bold; height: 28px; }
+        
         .board { 
             display: grid; 
             grid-template-columns: repeat(3, 90px); 
@@ -35,29 +62,52 @@
             font-weight: bold; 
             cursor: pointer; 
             user-select: none;
-            transition: background 0.2s, transform 0.1s; 
+            transition: all 0.2s ease; 
         }
+        .cell:hover { background-color: #45475a; }
         .cell:active { transform: scale(0.95); }
         .cell.x { color: #f38ba8; }
         .cell.o { color: #89b4fa; }
+        
         .btn-reset { 
-            margin-top: 30px; 
+            margin-top: 25px; 
             padding: 12px 28px; 
-            font-size: 1.1rem; 
+            font-size: 1rem; 
             font-weight: bold; 
-            background-color: #a6e3a1; 
+            background: linear-gradient(45deg, #a6e3a1, #94e2d5); 
             color: #11111b; 
             border: none; 
             border-radius: 10px; 
             cursor: pointer; 
+            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
         }
         .btn-reset:active { transform: scale(0.95); }
     </style>
 </head>
 <body>
 
-    <h1>X O X Game</h1>
-    <div class="status" id="status">X ගේ වාරය</div>
+    <h1 class="title">NR XOX GAME</h1>
+
+    <div class="scoreboard">
+        <div class="score-box">
+            <div class="label">තරඟ ගණන</div>
+            <div class="val" id="totalGames">0</div>
+        </div>
+        <div class="score-box">
+            <div class="label">ඔබ (X)</div>
+            <div class="val" id="xWins">0</div>
+        </div>
+        <div class="score-box">
+            <div class="label">Notiya (O)</div>
+            <div class="val" id="oWins">0</div>
+        </div>
+        <div class="score-box">
+            <div class="label">Draw</div>
+            <div class="val" id="draws">0</div>
+        </div>
+    </div>
+
+    <div class="status" id="status">ඔබේ වාරය</div>
     
     <div class="board" id="board">
         <div class="cell" data-index="0"></div>
@@ -71,13 +121,23 @@
         <div class="cell" data-index="8"></div>
     </div>
 
-    <button class="btn-reset" onclick="resetGame()">නැවත පටන්ගන්න</button>
+    <button class="btn-reset" onclick="resetBoard()">නැවත පටන්ගන්න</button>
 
     <script>
         let board = ["", "", "", "", "", "", "", "", ""];
         let currentPlayer = "X";
         let gameActive = true;
+        
+        let totalGames = 0;
+        let xWins = 0;
+        let oWins = 0;
+        let draws = 0;
+
         const statusDisplay = document.getElementById("status");
+        const totalGamesElem = document.getElementById("totalGames");
+        const xWinsElem = document.getElementById("xWins");
+        const oWinsElem = document.getElementById("oWins");
+        const drawsElem = document.getElementById("draws");
 
         const winningConditions = [
             [0, 1, 2], [3, 4, 5], [6, 7, 8],
@@ -93,16 +153,27 @@
             const clickedCell = e.target;
             const index = parseInt(clickedCell.getAttribute("data-index"));
 
-            if (board[index] !== "" || !gameActive) return;
+            if (board[index] !== "" || !gameActive || currentPlayer !== "X") return;
 
-            board[index] = currentPlayer;
-            clickedCell.innerText = currentPlayer;
-            clickedCell.classList.add(currentPlayer.toLowerCase());
+            makeMove(index, "X");
 
-            checkResult();
+            if (gameActive) {
+                currentPlayer = "O";
+                statusDisplay.innerText = "Notiya සිතමින් සිටී...";
+                setTimeout(aiTurn, 500);
+            }
         }
 
-        function checkResult() {
+        function makeMove(index, player) {
+            board[index] = player;
+            const cell = document.querySelector(`.cell[data-index='${index}']`);
+            cell.innerText = player;
+            cell.classList.add(player.toLowerCase());
+
+            checkResult(player);
+        }
+
+        function checkResult(player) {
             let roundWon = false;
             for (let i = 0; i < winningConditions.length; i++) {
                 const [a, b, c] = winningConditions[i];
@@ -113,26 +184,92 @@
             }
 
             if (roundWon) {
-                statusDisplay.innerText = `${currentPlayer} දිනුවා! 🎉`;
                 gameActive = false;
+                totalGames++;
+                if (player === "X") {
+                    xWins++;
+                    statusDisplay.innerText = "ඔබ දිනුවා! 🎉";
+                } else {
+                    oWins++;
+                    statusDisplay.innerText = "Notiya දිනුවා! 🤖";
+                }
+                updateScoreboard();
                 return;
             }
 
             if (!board.includes("")) {
-                statusDisplay.innerText = "ජය පරාජයෙන් තොරයි! 🤝";
                 gameActive = false;
+                totalGames++;
+                draws++;
+                statusDisplay.innerText = "ජය පරාජයෙන් තොරයි! 🤝";
+                updateScoreboard();
                 return;
             }
-
-            currentPlayer = currentPlayer === "X" ? "O" : "X";
-            statusDisplay.innerText = `${currentPlayer} ගේ වාරය`;
         }
 
-        function resetGame() {
+        function aiTurn() {
+            if (!gameActive) return;
+
+            const bestMove = getBestMove();
+            makeMove(bestMove, "O");
+
+            if (gameActive) {
+                currentPlayer = "X";
+                statusDisplay.innerText = "ඔබේ වාරය";
+            }
+        }
+
+        function getBestMove() {
+            // 1. Check if AI can win
+            for (let i = 0; i < 9; i++) {
+                if (board[i] === "") {
+                    board[i] = "O";
+                    if (checkWin("O")) {
+                        board[i] = "";
+                        return i;
+                    }
+                    board[i] = "";
+                }
+            }
+
+            // 2. Block Player from winning
+            for (let i = 0; i < 9; i++) {
+                if (board[i] === "") {
+                    board[i] = "X";
+                    if (checkWin("X")) {
+                        board[i] = "";
+                        return i;
+                    }
+                    board[i] = "";
+                }
+            }
+
+            // 3. Take center if empty
+            if (board[4] === "") return 4;
+
+            // 4. Random move
+            const emptyIndices = board.map((val, idx) => val === "" ? idx : null).filter(val => val !== null);
+            return emptyIndices[Math.floor(Math.random() * emptyIndices.length)];
+        }
+
+        function checkWin(player) {
+            return winningConditions.some(condition => {
+                return condition.every(index => board[index] === player);
+            });
+        }
+
+        function updateScoreboard() {
+            totalGamesElem.innerText = totalGames;
+            xWinsElem.innerText = xWins;
+            oWinsElem.innerText = oWins;
+            drawsElem.innerText = draws;
+        }
+
+        function resetBoard() {
             board = ["", "", "", "", "", "", "", "", ""];
             currentPlayer = "X";
             gameActive = true;
-            statusDisplay.innerText = "X ගේ වාරය";
+            statusDisplay.innerText = "ඔබේ වාරය";
             document.querySelectorAll(".cell").forEach(cell => {
                 cell.innerText = "";
                 cell.classList.remove("x", "o");
